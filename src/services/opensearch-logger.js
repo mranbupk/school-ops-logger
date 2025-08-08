@@ -16,10 +16,10 @@ class OpenSearchLogger {
     try {
       this.client = await opensearchConfig.connect();
       await opensearchConfig.createIndex(this.indexName);
-      
+
       // Start periodic flush
       this.startPeriodicFlush();
-      
+
       console.log('✅ OpenSearch Logger initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize OpenSearch Logger:', error.message);
@@ -47,16 +47,16 @@ class OpenSearchLogger {
   async logToOpenSearch(level, scope, methodName, message, args = {}, options = {}) {
     try {
       const logDoc = this.createLogDocument(level, scope, methodName, message, args, options);
-      
+
       // Add to bulk buffer
       this.bulkBuffer.push({ index: { _index: this.indexName } });
       this.bulkBuffer.push(logDoc.body);
-      
+
       // Flush if buffer is full
       if (this.bulkBuffer.length >= this.bulkSize * 2) {
         await this.flush();
       }
-      
+
       return logDoc;
     } catch (error) {
       console.error('❌ Failed to log to OpenSearch:', error.message);
@@ -66,19 +66,21 @@ class OpenSearchLogger {
 
   async flush() {
     if (this.bulkBuffer.length === 0) return;
-    
+
+    // Swap buffer
+    const logsToFlush = this.bulkBuffer;
+    this.bulkBuffer = [];
+
     try {
       const response = await this.client.bulk({
-        body: this.bulkBuffer
+        body: logsToFlush
       });
-      
+
       if (response.body.errors) {
         console.error('❌ Bulk indexing errors:', response.body.items);
       } else {
-        console.log(`✅ Flushed ${this.bulkBuffer.length / 2} log entries to OpenSearch`);
+        console.log(`✅ Flushed ${logsToFlush.length / 2} log entries to OpenSearch`);
       }
-      
-      this.bulkBuffer = [];
     } catch (error) {
       console.error('❌ Failed to flush logs to OpenSearch:', error.message);
       throw error;
@@ -149,7 +151,7 @@ class OpenSearchLogger {
           size
         }
       });
-      
+
       return response.body.hits;
     } catch (error) {
       console.error('❌ Failed to search logs:', error.message);
