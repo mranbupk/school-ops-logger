@@ -170,12 +170,12 @@ class StudentController {
     } catch (error) {
       const duration = Date.now() - startTime;
       
-      logger.error('Failed to get students', error, {
+      logger.error(SCOPE, 'getAllStudents', error, {
         query: req.query,
         duration
       });
       
-      await opensearchLogger.error('Failed to get students', error, {
+      await opensearchLogger.error(SCOPE, 'getAllStudents', error, {
         query: req.query,
         duration
       });
@@ -196,12 +196,12 @@ class StudentController {
       const student = students.get(id);
       
       if (!student) {
-        logger.warn('Student not found', {
+        logger.warn(SCOPE, 'getStudentById', 'Student not found', {
           studentId: id,
           requestedBy: req.user?.id
         });
         
-        await opensearchLogger.warn('Student not found', {
+        await opensearchLogger.warn(SCOPE, 'getStudentById', 'Student not found', {
           studentId: id,
           requestedBy: req.user?.id
         });
@@ -258,12 +258,12 @@ class StudentController {
       const student = students.get(id);
       
       if (!student) {
-        logger.warn('Student not found for update', {
+        logger.warn(SCOPE, 'updateStudent', 'Student not found for update', {
           studentId: id,
           requestedBy: req.user?.id
         });
         
-        await opensearchLogger.warn('Student not found for update', {
+        await opensearchLogger.warn(SCOPE, 'updateStudent', 'Student not found for update', {
           studentId: id,
           requestedBy: req.user?.id
         });
@@ -277,13 +277,13 @@ class StudentController {
       // Validate input
       const { error, value } = studentSchema.validate(req.body);
       if (error) {
-        logger.warn('Student update failed - validation error', {
+        logger.warn(SCOPE, 'updateStudent', 'Student update failed - validation error', {
           studentId: id,
           errors: error.details,
           input: req.body
         });
         
-        await opensearchLogger.warn('Student update failed - validation error', {
+        await opensearchLogger.warn(SCOPE, 'updateStudent', 'Student update failed - validation error', {
           studentId: id,
           errors: error.details,
           input: req.body
@@ -328,13 +328,13 @@ class StudentController {
     } catch (error) {
       const duration = Date.now() - startTime;
       
-      logger.error('Failed to update student', error, {
+      logger.error(SCOPE, 'updateStudent', error, {
         studentId: id,
         input: req.body,
         duration
       });
       
-      await opensearchLogger.error('Failed to update student', error, {
+      await opensearchLogger.error(SCOPE, 'updateStudent', error, {
         studentId: id,
         input: req.body,
         duration
@@ -356,12 +356,12 @@ class StudentController {
       const student = students.get(id);
       
       if (!student) {
-        logger.warn('Student not found for deletion', {
+        logger.warn(SCOPE, 'deleteStudent', 'Student not found for deletion', {
           studentId: id,
           requestedBy: req.user?.id
         });
         
-        await opensearchLogger.warn('Student not found for deletion', {
+        await opensearchLogger.warn(SCOPE, 'deleteStudent', 'Student not found for deletion', {
           studentId: id,
           requestedBy: req.user?.id
         });
@@ -395,12 +395,12 @@ class StudentController {
     } catch (error) {
       const duration = Date.now() - startTime;
       
-      logger.error('Failed to delete student', error, {
+      logger.error(SCOPE, 'deleteStudent', error, {
         studentId: id,
         duration
       });
       
-      await opensearchLogger.error('Failed to delete student', error, {
+      await opensearchLogger.error(SCOPE, 'deleteStudent', error, {
         studentId: id,
         duration
       });

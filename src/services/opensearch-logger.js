@@ -1,5 +1,4 @@
 const opensearchConfig = require('../config/opensearch');
-const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
 class OpenSearchLogger {
@@ -137,6 +136,19 @@ class OpenSearchLogger {
     return this.logToOpenSearch('info', 'Event', eventType, `Event: ${eventType}`, values, {
       eventType,
       ...options
+    });
+  }
+
+  // Action helper to normalize resource/action logs
+  async logAction(action, resource, resourceId = null, metadata = {}) {
+    const scope = `Action#${action}`;
+    const methodName = `${resource}_action`;
+    const message = `Action: ${action} on resource: ${resource}`;
+    return this.info(scope, methodName, message, {}, {
+      action,
+      resource,
+      resourceId,
+      ...metadata
     });
   }
 

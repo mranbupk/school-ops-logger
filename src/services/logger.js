@@ -1,5 +1,4 @@
 const winston = require('winston');
-const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
 const packageJson = require('../../package.json');
@@ -88,6 +87,13 @@ class LoggerService {
     return logEntry;
   }
 
+  // Warn logging
+  warn(scope, methodName, message, args = {}, options = {}) {
+    const logEntry = this.createLogEntry('warn', scope, methodName, message, args, options);
+    this.logger.warn(message, logEntry);
+    return logEntry;
+  }
+
   // Log (alias for info)
   log(scope, methodName, message, args = {}, options = {}) {
     return this.info(scope, methodName, message, args, options);
@@ -108,6 +114,19 @@ class LoggerService {
     });
     this.logger.info(`Event: ${eventType}`, logEntry);
     return logEntry;
+  }
+
+  // Action helper to normalize resource/action logs
+  logAction(action, resource, resourceId = null, metadata = {}) {
+    const scope = `Action#${action}`;
+    const methodName = `${resource}_action`;
+    const message = `Action: ${action} on resource: ${resource}`;
+    return this.info(scope, methodName, message, {}, {
+      action,
+      resource,
+      resourceId,
+      ...metadata
+    });
   }
 
   // Helper method to create scope

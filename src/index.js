@@ -99,7 +99,7 @@ class SchoolApplication {
           }
         });
       } catch (error) {
-        logger.error('Health check failed', error);
+        logger.error(SCOPE, 'health', error);
         res.status(500).json({
           status: 'unhealthy',
           error: error.message
@@ -110,13 +110,15 @@ class SchoolApplication {
     // Logs endpoint for viewing recent logs
     this.app.get('/logs', async (req, res) => {
       try {
-        const { level, action, resource, size = 50 } = req.query;
+        const { level, action, resource, q, size = 50 } = req.query;
         
-        let query = {};
-        if (level) query.level = level;
-        if (action) query.action = action;
-        if (resource) query.resource = resource;
+        const must = [];
+        if (level) must.push({ match: { level } });
+        if (action) must.push({ match: { action } });
+        if (resource) must.push({ match: { resource } });
+        if (q) must.push({ query_string: { query: q } });
         
+        const query = must.length > 0 ? { bool: { must } } : { match_all: {} };
         const logs = await opensearchLogger.searchLogs(query, parseInt(size));
         
         res.json({
@@ -125,7 +127,7 @@ class SchoolApplication {
           total: logs.total.value
         });
       } catch (error) {
-        logger.error('Failed to fetch logs', error);
+        logger.error(SCOPE, 'getLogs', error);
         res.status(500).json({
           success: false,
           message: 'Failed to fetch logs'
@@ -155,7 +157,7 @@ class SchoolApplication {
   setupErrorHandling() {
     // 404 handler
     this.app.use((req, res) => {
-      logger.warn('Route not found', {
+      logger.warn(SCOPE, 'notFound', 'Route not found', {
         method: req.method,
         path: req.path,
         ip: req.ip
@@ -169,13 +171,13 @@ class SchoolApplication {
 
     // Global error handler
     this.app.use(async (error, req, res, next) => {
-      logger.error('Unhandled error', error, {
+      logger.error(SCOPE, 'globalError', error, {
         method: req.method,
         path: req.path,
         ip: req.ip
       });
       
-      await opensearchLogger.error('Unhandled error', error, {
+      await opensearchLogger.error(SCOPE, 'globalError', error, {
         method: req.method,
         path: req.path,
         ip: req.ip
@@ -220,6 +222,7 @@ class SchoolApplication {
       if (this.server) {
         this.server.close(() => {
           console.log('✅ Server closed');
+          console.log('👋 Goodbye!');
           process.exit(0);
         });
       } else {
