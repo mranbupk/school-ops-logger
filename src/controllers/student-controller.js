@@ -2,6 +2,7 @@ const logger = require('../services/logger');
 const opensearchLogger = require('../services/opensearch-logger');
 const Joi = require('joi');
 const packageJson = require('../../package.json');
+const { kafkaClient, kafkaPublisher } = require('../services/kafka');
 
 // Scope definition at the top like a library
 const SCOPE = `StudentController#${packageJson.version}`;
@@ -66,10 +67,22 @@ class StudentController {
       console.log('🔍 DEBUG: Student stored successfully');
       
       const duration = Date.now() - startTime;
-      console.log('🔍 DEBUG: Operation duration:', duration, 'ms');
+
+      // Publish Kafka event
+      try {
+        await kafkaPublisher.publishDomainEvent({
+          topic: process.env.KAFKA_TOPIC_STUDENTS || 'school.students.v1',
+          entityId: studentId,
+          resource: 'student',
+          action: 'create',
+          payload: student,
+          traceId: req.headers['x-request-id'] || null
+        });
+      } catch (e) {
+        logger.warn(SCOPE, 'createStudent', 'Kafka publish failed', { error: e.message });
+      }
       
       // Log successful creation
-      console.log('🔍 DEBUG: Logging to Winston...');
       logger.info(SCOPE, 'createStudent', 'Student created successfully', {
         studentId,
         studentName: student.name,
@@ -77,14 +90,12 @@ class StudentController {
         duration
       });
       
-      console.log('🔍 DEBUG: Logging to OpenSearch...');
       await opensearchLogger.info(SCOPE, 'createStudent', 'Student created successfully', {
         studentId,
         studentName: student.name,
         grade: student.grade,
         duration
       });
-      console.log('🔍 DEBUG: Logging completed');
 
       res.status(201).json({
         success: true,
@@ -232,12 +243,12 @@ class StudentController {
     } catch (error) {
       const duration = Date.now() - startTime;
       
-      logger.error('Failed to get student', error, {
+      logger.error(SCOPE, 'getStudentById', error, {
         studentId: id,
         duration
       });
       
-      await opensearchLogger.error('Failed to get student', error, {
+      await opensearchLogger.error(SCOPE, 'getStudentById', error, {
         studentId: id,
         duration
       });
@@ -304,6 +315,20 @@ class StudentController {
       };
       
       students.set(id, updatedStudent);
+
+      // Publish Kafka event
+      try {
+        await kafkaPublisher.publishDomainEvent({
+          topic: process.env.KAFKA_TOPIC_STUDENTS || 'school.students.v1',
+          entityId: id,
+          resource: 'student',
+          action: 'update',
+          payload: updatedStudent,
+          traceId: req.headers['x-request-id'] || null
+        });
+      } catch (e) {
+        logger.warn(SCOPE, 'updateStudent', 'Kafka publish failed', { error: e.message });
+      }
       
       const duration = Date.now() - startTime;
       
@@ -374,6 +399,20 @@ class StudentController {
 
       // Delete student
       students.delete(id);
+
+      // Publish Kafka event
+      try {
+        await kafkaPublisher.publishDomainEvent({
+          topic: process.env.KAFKA_TOPIC_STUDENTS || 'school.students.v1',
+          entityId: id,
+          resource: 'student',
+          action: 'delete',
+          payload: { id },
+          traceId: req.headers['x-request-id'] || null
+        });
+      } catch (e) {
+        logger.warn(SCOPE, 'deleteStudent', 'Kafka publish failed', { error: e.message });
+      }
       
       const duration = Date.now() - startTime;
       
@@ -413,4 +452,4 @@ class StudentController {
   }
 }
 
-module.exports = StudentController; 
+module.exports = StudentController

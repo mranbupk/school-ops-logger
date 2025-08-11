@@ -47,8 +47,10 @@ class OpenSearchLogger {
     try {
       const logDoc = this.createLogDocument(level, scope, methodName, message, args, options);
 
+      const targetIndex = options && options.indexOverride ? options.indexOverride : this.indexName;
+
       // Add to bulk buffer
-      this.bulkBuffer.push({ index: { _index: this.indexName } });
+      this.bulkBuffer.push({ index: { _index: targetIndex } });
       this.bulkBuffer.push(logDoc.body);
 
       // Flush if buffer is full

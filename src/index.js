@@ -3,6 +3,7 @@ const logger = require('./services/logger');
 const opensearchLogger = require('./services/opensearch-logger');
 const studentRoutes = require('./routes/student-routes');
 const packageJson = require('../package.json');
+const { kafkaClient } = require('./services/kafka');
 require('dotenv').config();
 
 // Scope definition at the top like a library
@@ -27,6 +28,15 @@ class SchoolApplication {
       console.log('🔍 DEBUG: Initializing OpenSearch logger...');
       await opensearchLogger.initialize();
       console.log('🔍 DEBUG: OpenSearch logger initialized successfully');
+
+      // Initialize Kafka client
+      console.log('🔍 DEBUG: Initializing Kafka client...');
+      try {
+        await kafkaClient.init();
+        console.log('✅ Kafka client initialized');
+      } catch (e) {
+        console.warn('⚠️ Kafka init failed:', e.message);
+      }
       
       // Log application startup
       console.log('🔍 DEBUG: Logging application startup...');
@@ -89,13 +99,20 @@ class SchoolApplication {
     this.app.get('/health', async (req, res) => {
       try {
         const opensearchHealth = await opensearchLogger.client.cluster.health();
+        let kafkaHealthy = false;
+        try {
+          // simple metadata fetch to assert connection
+          await kafkaClient.producer?.connect();
+          kafkaHealthy = true;
+        } catch {}
         
         res.json({
           status: 'healthy',
           timestamp: new Date().toISOString(),
           services: {
             application: 'healthy',
-            opensearch: opensearchHealth.body.status
+            opensearch: opensearchHealth.body.status,
+            kafka: kafkaHealthy ? 'healthy' : 'unavailable'
           }
         });
       } catch (error) {
